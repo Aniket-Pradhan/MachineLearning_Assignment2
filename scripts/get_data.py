@@ -1,4 +1,5 @@
 import pickle
+import numpy as np
 from pathlib import Path
 
 class data:
@@ -19,6 +20,7 @@ class data:
         test = self.unpickle(file_name)
         self.test_data = test["data"]
         self.test_data = self.test_data.reshape((len(self.test_data), 3, 32, 32)).transpose(0, 2, 3, 1)
+        self.test_data = np.reshape(self.test_data, (self.test_data.shape[0], -1))
         self.test_labels = test["labels"]
     
     def load_cifar_train(self, ind):
@@ -28,6 +30,7 @@ class data:
         train = self.unpickle(file_name)
         self.train_data = train["data"]
         self.train_data = self.train_data.reshape((len(self.train_data), 3, 32, 32)).transpose(0, 2, 3, 1)
+        self.train_data = np.reshape(self.train_data, (self.train_data.shape[0], -1))
         self.train_labels = train["labels"]
 
     def __init__(self):

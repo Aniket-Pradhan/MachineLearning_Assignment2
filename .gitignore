@@ -2,3 +2,5 @@
 .vscode/
 .ipynb_checkpoints/
 datasets/cifar
+
+scripts/__pycache__/
