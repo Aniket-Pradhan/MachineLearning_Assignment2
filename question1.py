@@ -1,6 +1,9 @@
+import os
 import time
+import pickle
 import argparse
 import numpy as np
+from pathlib import Path
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 # get_ipython().run_line_magic('ma  tplotlib', 'inline')
@@ -9,20 +12,43 @@ from sklearn.svm import LinearSVC
 
 from scripts import get_data
 
-def savePickle(self, filename, data):
+def savePickle(filename, data):
     with open(filename, 'wb') as file:
         pickle.dump(data, file, protocol=pickle.HIGHEST_PROTOCOL)
 
-def loadPickle(self, filename):
+def loadPickle(filename):
     with open(filename, 'rb') as handle:
         b = pickle.load(handle)
     return b
+
+def checkandcreatedir(path):
+    if not os.path.isdir(path):
+        os.makedirs(path)
+
+def storemodel(model, name):
+    root = str(Path(__file__).parent.parent)
+    modeldir = root + "/models"
+    checkandcreatedir(modeldir)
+    filepath = modeldir + "/" + name
+    savePickle(filepath, model)
+
+def loadmodel(filename):
+    root = str(Path(__file__).parent.parent)
+    modeldir = root + "/models"
+    filename = modeldir + "/" + filename
+    try:
+        model = loadPickle(filename)
+        return model
+    except:
+        raise Exception("Model not found: " + filename )
+
 
 def svc_param_selection(X, Y, numFolds):
     Cs = [0.001, 0.01, 0.1]
     param_grid = {'C': Cs}
     grid_search = GridSearchCV(LinearSVC(random_state=0, tol=1e-5), param_grid, cv=nfolds, verbose=10)
     grid_search.fit(X, Y)
+    storemodel(grid_search, "gridsearch")
     # print(grid_search.best_params_)
     return grid_search.best_params_
 
@@ -30,12 +56,14 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("-p", "--preprocess", required=False, help="Just preprocess the train and test data.", action="store_true")
     ap.add_argument("-lt", "--loadtraintestdata", required=False, help="Use cached/stored train test data.", action="store_true")
+    ap.add_argument("-lg", "--loadgridsearch", required=False, help="Use cached/stored grid_search data.", action="store_true")
     ap.add_argument("-n", "--num-folds", required=False, default=3, help="Number of folds to find the best param.")
     args = vars(ap.parse_args())
 
     preprocess = args["preprocess"]
     loadtraintestdata = args["loadtraintestdata"]
-    numFolds = args["numFolds"]
+    numFolds = args["num_folds"]
+    loadgridsearch = args["loadgridsearch"]
 
     data = get_data.data(loadtraintestdata)
     data.load_cifar_labels()
@@ -50,5 +78,8 @@ if __name__ == "__main__":
 
     print("Finding best params for the linear SVM")
     start_time = time.time()
-    best_params = svc_param_selection(data.train_data, data.train_labels, numFolds)
+    if loadgridsearch:
+        gridsearch = loadmodel("gridsearch")
+    else:
+        best_params = svc_param_selection(data.train_data, data.train_labels, numFolds)
     print("Time taken: %s seconds ---" % (time.time() - start_time))
