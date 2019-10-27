@@ -46,7 +46,7 @@ def loadmodel(filename):
 def svc_param_selection(X, Y, numFolds):
     Cs = [0.001, 0.01, 0.1]
     param_grid = {'C': Cs}
-    grid_search = GridSearchCV(LinearSVC(random_state=0, tol=1e-5), param_grid, cv=nfolds, verbose=10)
+    grid_search = GridSearchCV(LinearSVC(random_state=0, tol=1e-5), param_grid, cv=numFolds, verbose=10)
     grid_search.fit(X, Y)
     storemodel(grid_search, "gridsearch")
     # print(grid_search.best_params_)
