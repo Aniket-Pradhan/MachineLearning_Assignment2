@@ -2,5 +2,5 @@
 .vscode/
 .ipynb_checkpoints/
 datasets/cifar
-
+models/
 scripts/__pycache__/
