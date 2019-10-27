@@ -51,7 +51,7 @@ class data:
         file_name = self.cifar_dataset + "/test_batch"
         test = self.unpickle(file_name)
         test_data = test["data"]
-        test_data = test_data.reshape((len(test_data), 3, 32, 32)).transpose(0, 2, 3, 1)
+        test_data = test_data.reshape((-1, 3, 32, 32)).transpose(0, 2, 3, 1)
         test_data = test_data.astype('float32')
         test_data = test_data / 255.0
         self.test_data = []
@@ -61,7 +61,7 @@ class data:
         self.test_data = np.array(self.test_data)
 
         self.test_data = np.reshape(self.test_data, (self.test_data.shape[0], -1))
-        self.test_labels = test["labels"]
+        self.test_labels = np.array(test["labels"])
 
         test_data = {}
         test_data["data"] = self.test_data
@@ -78,23 +78,28 @@ class data:
             return
 
         train_data_names = ["/data_batch_1", "/data_batch_2", "/data_batch_3", "/data_batch_4", "/data_batch_5"]
-        self.train_data = []
+        train_data = []
         self.train_labels = []
         for name in train_data_names:
             file_name = self.cifar_dataset + name
             train = self.unpickle(file_name)
-            train_data = train["data"]
-            train_data = train_data.reshape((len(train_data), 3, 32, 32)).transpose(0, 2, 3, 1)
-            train_data = train_data.astype('float32')
-            train_data = train_data / 255.0
-            ## convert to grayscale
-            for im_ind in range(len(train_data)):
-                self.train_data.append(rgb2gray(train_data[im_ind]))
+            _train_data = train["data"]
+            train_data.append(_train_data)
+
             self.train_labels.extend(train["labels"])
         
-        self.train_data = np.array(self.train_data)
-        self.train_data = np.reshape(self.train_data, (self.train_data.shape[0], -1))
+        train_data = np.array(train_data)
         
+        ## normalize
+        train_data = train_data.astype("float32")
+        train_data /= 255.0
+        train_data = train_data.reshape([-1, 3, 32, 32]).transpose(0, 2, 3, 1)
+        
+        ## grayscale
+        self.train_data = rgb2gray(train_data)
+        self.train_data = np.reshape(self.train_data, (self.train_data.shape[0], -1))
+        self.train_labels = np.array(self.train_labels)
+
         train_data = {}
         train_data["data"] = self.train_data
         train_data["labels"] = self.train_labels
