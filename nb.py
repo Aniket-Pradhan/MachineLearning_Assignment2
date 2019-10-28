@@ -14,9 +14,9 @@ from sklearn.metrics import f1_score
 from sklearn.datasets import load_wine
 from sklearn.metrics import roc_curve, auc
 from sklearn.naive_bayes import GaussianNB
-from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import label_binarize
 from sklearn.multiclass import OneVsRestClassifier
+from sklearn.model_selection import train_test_split
 
 from scripts import onevsone
 
@@ -53,6 +53,8 @@ def loadmodel(filename):
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("-p", "--plotdata", required=False, help="Plot the wine dataset.", action="store_true")
+    ap.add_argument("-ovo", "--onevsone", required=False, help="Do the onevsone classification.", action="store_true")
+    ap.add_argument("-lovo", "--loadonevsone", required=False, help="Load the onevsone classification cached model.", action="store_true")
     ap.add_argument("-nb", "--naivebayes", required=False, help="Do the Naive-Bayes classification.", action="store_true")
     ap.add_argument("-lnb", "--loadnaivebayes", required=False, help="Load the Naive-Bayes classification cached model.", action="store_true")
     ap.add_argument("-dt", "--dectree", required=False, help="Do the descision tree classification.", action="store_true")
@@ -65,6 +67,8 @@ if __name__ == "__main__":
     lnb = args["loadnaivebayes"]
     dt = args["dectree"]
     ldt = args["loaddectree"]
+    ovo = args["onevsone"]
+    lovo = args["loadonevsone"]
 
     raw_data = load_wine()
     n_classes = 3
@@ -77,25 +81,15 @@ if __name__ == "__main__":
 
     X = pd.DataFrame(data=wine_data, index=wine_index, columns=wine_columns)
     # normalizing X
-    X = pd.DataFrame(data=min_max_scaler.fit_transform(X), columns=X.columns, index=X.index)
+    # X = pd.DataFrame(data=min_max_scaler.fit_transform(X), columns=X.columns, index=X.index)
     Y = pd.DataFrame(data=raw_data["target"], index=wine_index, columns=["Target"])
 
-    train_X, test_X, train_Y, test_Y = train_test_split(X, Y, test_size = 0.2, random_state = 0)
+    train_X, test_X, train_Y, test_Y = train_test_split(X, Y, test_size = 0.30, random_state = 42)
     # convert to np arrays
     train_X = train_X.values
     train_Y = train_Y.values
     test_X = test_X.values
     test_Y = test_Y.values
-
-    y_test_roc = [0] * n_classes
-    for _ in range(n_classes):
-        y_test_roc[_] = []
-    for i in test_Y:
-        y_test_roc[i[0]].append(1)
-        for j in range(n_classes):
-            if j != i[0]:
-                y_test_roc[j].append(0)
-    y_test_roc = np.array(y_test_roc)
 
     if plotdata:
         print("Plotting")
@@ -103,6 +97,26 @@ if __name__ == "__main__":
         g = sns.pairplot(X, palette="husl")
         plt.show()
     
+    if ovo or lovo:
+        start_time = time.time()
+        if lovo:
+            ovo_model = loadmodel("ovomodel")
+        else:
+            ovo_model = onevsone.onevsone(n_classes, train_X, train_Y)
+            ovo_model.fit()
+            storemodel(ovo_model, "ovomodel")
+        print("Time taken: %s seconds ---" % (time.time() - start_time))
+        train_accuracy, train_y_preds = ovo_model.score(train_X, train_Y)
+        test_accuracy, test_y_preds = ovo_model.score(test_X, test_Y)
+
+        # Accuracy
+        print("Training Accuracy:", ovo_model.train_accuracy, train_accuracy)
+        print("Testing Accuracy:", test_accuracy)
+
+        # F1 Score
+        print("Training F1-Score", f1_score(train_Y, train_y_preds, average='micro') )
+        print("Testing F1-Score", f1_score(test_Y, test_y_preds, average='micro') )
+        
     if nb or lnb:
         start_time = time.time()
         if lnb:
