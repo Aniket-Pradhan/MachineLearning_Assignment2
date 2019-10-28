@@ -58,6 +58,7 @@ if __name__ == "__main__":
     ap.add_argument("-lt", "--loadtraintestdata", required=False, help="Use cached/stored train test data.", action="store_true")
     ap.add_argument("-lg", "--loadgridsearch", required=False, help="Use cached/stored grid_search data.", action="store_true")
     ap.add_argument("-lm", "--loadtrainmodel", required=False, help="Use cached/stored model.", action="store_true")
+    ap.add_argument("-lmn", "--loadtrainmodelnew", required=False, help="Use cached/stored updated model (trained only on support vecs)).", action="store_true")
     ap.add_argument("-n", "--num-folds", required=False, default=3, help="Number of folds to find the best param.")
     args = vars(ap.parse_args())
 
@@ -66,6 +67,7 @@ if __name__ == "__main__":
     numFolds = args["num_folds"]
     loadgridsearch = args["loadgridsearch"]
     loadtrainmodel = args["loadtrainmodel"]
+    loadnewtrainmodel = args["loadtrainmodelnew"]
 
     data = get_data.data(loadtraintestdata)
     data.load_cifar_labels()
@@ -98,6 +100,29 @@ if __name__ == "__main__":
         linsvm_model.fit(data.train_data, data.train_labels)
         storemodel(linsvm_model, "trained_model")
     print("Time taken: %s seconds ---" % (time.time() - start_time))
-    print("Training accuracy:", linsvm_model.score(data.train_data, data.train_labels))
-    print("Testing accuracy:", linsvm_model.score(data.test_data, data.test_labels))
-    print(linsvm_model.support_vectors_, "\n\n", linsvm_model.support_, "\n\n", linsvm_model.n_support_)
+    # print("Training accuracy:", linsvm_model.score(data.train_data, data.train_labels))
+    # Test
+    # print("Testing accuracy:", linsvm_model.score(data.test_data, data.test_labels))
+    
+    # Find support vectors
+    supportvecindices = linsvm_model.support_
+    new_training_set = []
+    new_training_labels = []
+    for supportvecindex in supportvecindices:
+        new_training_set.append(data.train_data[supportvecindex])
+        new_training_labels.append(data.train_labels[supportvecindex])
+    new_training_set = np.array(new_training_set)
+    new_training_labels = np.array(new_training_labels)
+    
+    print("Training model on best params and on support vectors")
+    start_time = time.time()
+    if loadnewtrainmodel:
+        linsvm_model_new = loadmodel("trained_model_new")
+    else:
+        linsvm_model_new = svm.SVC(kernel='linear', random_state=0, tol=1e-5, C=best_params["C"], verbose=10)
+        linsvm_model_new.fit(new_training_set, new_training_labels)
+        storemodel(linsvm_model_new, "trained_model_new")
+    print("Time taken: %s seconds ---" % (time.time() - start_time))
+    print("Training accuracy:", linsvm_model_new.score(new_training_set, new_training_labels))
+    # Test
+    print("Testing accuracy:", linsvm_model_new.score(data.test_data, data.test_labels))
