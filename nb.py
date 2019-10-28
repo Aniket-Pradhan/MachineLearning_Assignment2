@@ -15,6 +15,10 @@ from sklearn.datasets import load_wine
 from sklearn.metrics import roc_curve, auc
 from sklearn.naive_bayes import GaussianNB
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import label_binarize
+from sklearn.multiclass import OneVsRestClassifier
+
+from scripts import onevsone
 
 def checkandcreatedir(path):
     if not os.path.isdir(path):
@@ -111,9 +115,11 @@ if __name__ == "__main__":
             storemodel(gauss_nb_model, "naivebayes")
         print("Time taken: %s seconds ---" % (time.time() - start_time))
         print()
+        
         # Accuracy
         print("Training accuracy:", gauss_nb_model.score(train_X, train_Y))
         print("Testing accuracy:", gauss_nb_model.score(test_X, test_Y))
+        
         # F1 Score
         train_Y_pred = gauss_nb_model.predict(train_X)
         test_Y_pred = gauss_nb_model.predict(test_X)
@@ -121,42 +127,33 @@ if __name__ == "__main__":
         print("Training F1-Score", f1_score(train_Y, train_Y_pred, average='micro') )
         print("Testing F1-Score", f1_score(test_Y, test_Y_pred, average='micro') )
 
-        # y_score = gauss_nb_model.predict(test_X)
-        y_pred_roc = [0] * n_classes
-        for _ in range(n_classes):
-            y_pred_roc[_] = []
-        for i in test_Y_pred:
-            y_pred_roc[i].append(1)
-            for j in range(n_classes):
-                if j != i:
-                    y_pred_roc[j].append(0)
-        y_pred_roc = np.array(y_pred_roc)
-        
-        # print(y_test_roc[0], y_pred_roc[0])
-        # exit()
+        # ROC
+        Y_roc = label_binarize(Y, classes=[0, 1, 2])
+        train_X_roc, test_X_roc, train_Y_roc, test_Y_roc = train_test_split(X, Y_roc, test_size = 0.30, random_state = 42)
+        classifier = OneVsRestClassifier(GaussianNB())
+        y_score = classifier.fit(train_X_roc, train_Y_roc).predict(test_X_roc)
         fpr = dict()
         tpr = dict()
         roc_auc = dict()
         for i in range(n_classes):
-            fpr[i], tpr[i], _ = roc_curve(y_test_roc[:, i], y_pred_roc[:, i])
+            fpr[i], tpr[i], _ = roc_curve(test_Y_roc[:, i], y_score[:, i])
             roc_auc[i] = auc(fpr[i], tpr[i])
 
-        # Compute micro-average ROC curve and ROC area
-        # fpr["micro"], tpr["micro"], _ = roc_curve(y_test_roc.ravel(), y_pred_roc.ravel())
-        # roc_auc["micro"] = auc(fpr["micro"], tpr["micro"])
+        lw = 2
+        colors = ['red', 'blue', 'darkorange']
+
         plt.figure()
-        lw = 1
-        colors = ["red", "blue", "darkorange"]
         for i in range(n_classes):
-            plt.plot(fpr[i], tpr[i], color=colors[i],
-                    lw=lw, label='ROC curve (area = %0.2f)' % roc_auc[i])
-        plt.plot([0, 1], [0, 1], color='navy', lw=lw, linestyle='--')
-        plt.xlim([0.0, 1.0])
-        plt.ylim([0.0, 1.05])
-        plt.xlabel('False Positive Rate')
-        plt.ylabel('True Positive Rate')
+            plt.plot(fpr[i], tpr[i], color = colors[i], label='Class ' + str(i) + ' ROC curve (area = %0.2f)' % roc_auc[i])
+            plt.plot([0, 1], [0, 1], 'k--')
+            plt.xlim([0.0, 1.0])
+            plt.ylim([0.0, 1.05])
+            plt.xlabel('False Positive Rate')
+            plt.ylabel('True Positive Rate')
+            plt.title('Receiver operating characteristic example')
+            plt.legend(loc="lower right")
         plt.show()
-    
+
     if dt or ldt:
         start_time = time.time()
         if ldt:
@@ -168,9 +165,11 @@ if __name__ == "__main__":
             dectree_model.fit(train_X, train_Y.ravel())
             storemodel(dectree_model, "dectree")
         print("Time taken: %s seconds ---" % (time.time() - start_time))
+        
         # Accuracy
         print("Training accuracy:", dectree_model.score(train_X, train_Y))
         print("Testing accuracy:", dectree_model.score(test_X, test_Y))
+        
         # F1 Score
         train_Y_pred = dectree_model.predict(train_X)
         test_Y_pred = dectree_model.predict(test_X)
@@ -181,35 +180,29 @@ if __name__ == "__main__":
         tree.plot_tree(dectree_model)
         plt.show()
 
-        y_pred_roc = [0] * n_classes
-        for _ in range(n_classes):
-            y_pred_roc[_] = []
-        for i in test_Y_pred:
-            y_pred_roc[i].append(1)
-            for j in range(n_classes):
-                if j != i:
-                    y_pred_roc[j].append(0)
-        y_pred_roc = np.array(y_pred_roc)
-        
+        # ROC
+        Y_roc = label_binarize(Y, classes=[0, 1, 2])
+        train_X_roc, test_X_roc, train_Y_roc, test_Y_roc = train_test_split(X, Y_roc, test_size = 0.30, random_state = 42)
+        classifier = OneVsRestClassifier(tree.DecisionTreeClassifier())
+        y_score = classifier.fit(train_X_roc, train_Y_roc).predict(test_X_roc)
         fpr = dict()
         tpr = dict()
         roc_auc = dict()
         for i in range(n_classes):
-            fpr[i], tpr[i], _ = roc_curve(y_test_roc[:, i], y_pred_roc[:, i])
+            fpr[i], tpr[i], _ = roc_curve(test_Y_roc[:, i], y_score[:, i])
             roc_auc[i] = auc(fpr[i], tpr[i])
 
-        # Compute micro-average ROC curve and ROC area
-        # fpr["micro"], tpr["micro"], _ = roc_curve(y_test_roc.ravel(), y_pred_roc.ravel())
-        # roc_auc["micro"] = auc(fpr["micro"], tpr["micro"])
+        lw = 2
+        colors = ['red', 'blue', 'darkorange']
+
         plt.figure()
-        lw = 1
-        colors = ["red", "blue", "darkorange"]
         for i in range(n_classes):
-            plt.plot(fpr[i], tpr[i], color=colors[i],
-                    lw=lw, label='ROC curve (area = %0.2f)' % roc_auc[i])
-        plt.plot([0, 1], [0, 1], color='navy', lw=lw, linestyle='--')
-        plt.xlim([0.0, 1.0])
-        plt.ylim([0.0, 1.05])
-        plt.xlabel('False Positive Rate')
-        plt.ylabel('True Positive Rate')
+            plt.plot(fpr[i], tpr[i], color = colors[i], label='Class ' + str(i) + ' ROC curve (area = %0.2f)' % roc_auc[i])
+            plt.plot([0, 1], [0, 1], 'k--')
+            plt.xlim([0.0, 1.0])
+            plt.ylim([0.0, 1.05])
+            plt.xlabel('False Positive Rate')
+            plt.ylabel('True Positive Rate')
+            plt.title('Receiver operating characteristic example')
+            plt.legend(loc="lower right")
         plt.show()
