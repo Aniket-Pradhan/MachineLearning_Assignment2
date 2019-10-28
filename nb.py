@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 
 from sklearn import tree
 from sklearn import preprocessing
+from sklearn.metrics import f1_score
 from sklearn.datasets import load_wine
 from sklearn.naive_bayes import GaussianNB
 from sklearn.model_selection import train_test_split
@@ -97,9 +98,16 @@ if __name__ == "__main__":
             gauss_nb_model.fit(train_X, train_Y.ravel())
             storemodel(gauss_nb_model, "naivebayes")
         print("Time taken: %s seconds ---" % (time.time() - start_time))
+        print()
+        # Accuracy
         print("Training accuracy:", gauss_nb_model.score(train_X, train_Y))
-        # Test
         print("Testing accuracy:", gauss_nb_model.score(test_X, test_Y))
+        # F1 Score
+        train_Y_pred = gauss_nb_model.predict(train_X)
+        test_Y_pred = gauss_nb_model.predict(test_X)
+        # Calculate metrics globally by counting the total true positives, false negatives and false positives.
+        print("Training F1-Score", f1_score(train_Y, train_Y_pred, average='micro') )
+        print("Testing F1-Score", f1_score(test_Y, test_Y_pred, average='micro') )
     
     if dt or ldt:
         start_time = time.time()
@@ -112,6 +120,12 @@ if __name__ == "__main__":
             dectree_model.fit(train_X, train_Y.ravel())
             storemodel(dectree_model, "dectree")
         print("Time taken: %s seconds ---" % (time.time() - start_time))
+        # Accuracy
         print("Training accuracy:", dectree_model.score(train_X, train_Y))
-        # Test
         print("Testing accuracy:", dectree_model.score(test_X, test_Y))
+        # F1 Score
+        train_Y_pred = dectree_model.predict(train_X)
+        test_Y_pred = dectree_model.predict(test_X)
+        # Calculate metrics globally by counting the total true positives, false negatives and false positives.
+        print("Training F1-Score", f1_score(train_Y, train_Y_pred, average='micro') )
+        print("Testing F1-Score", f1_score(test_Y, test_Y_pred, average='micro') )
