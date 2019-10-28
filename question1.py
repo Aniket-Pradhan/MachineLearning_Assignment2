@@ -42,7 +42,6 @@ def loadmodel(filename):
     except:
         raise Exception("Model not found: " + filename )
 
-
 def svc_param_selection(X, Y, numFolds):
     Cs = [0.001, 0.01, 0.1]
     param_grid = {'C': Cs}
