@@ -18,7 +18,7 @@ from sklearn.preprocessing import label_binarize
 from sklearn.multiclass import OneVsRestClassifier
 from sklearn.model_selection import train_test_split
 
-from scripts import onevsone
+from scripts import onevsone, onevsrest
 
 def checkandcreatedir(path):
     if not os.path.isdir(path):
@@ -55,6 +55,8 @@ if __name__ == "__main__":
     ap.add_argument("-p", "--plotdata", required=False, help="Plot the wine dataset.", action="store_true")
     ap.add_argument("-ovo", "--onevsone", required=False, help="Do the onevsone classification.", action="store_true")
     ap.add_argument("-lovo", "--loadonevsone", required=False, help="Load the onevsone classification cached model.", action="store_true")
+    ap.add_argument("-ovr", "--onevsrest", required=False, help="Do the onevsrest classification.", action="store_true")
+    ap.add_argument("-lovr", "--loadonevsrest", required=False, help="Load the onevsrest classification cached model.", action="store_true")
     ap.add_argument("-nb", "--naivebayes", required=False, help="Do the Naive-Bayes classification.", action="store_true")
     ap.add_argument("-lnb", "--loadnaivebayes", required=False, help="Load the Naive-Bayes classification cached model.", action="store_true")
     ap.add_argument("-dt", "--dectree", required=False, help="Do the descision tree classification.", action="store_true")
@@ -69,6 +71,8 @@ if __name__ == "__main__":
     ldt = args["loaddectree"]
     ovo = args["onevsone"]
     lovo = args["loadonevsone"]
+    ovr = args["onevsrest"]
+    lovr = args["loadonevsrest"]
 
     raw_data = load_wine()
     n_classes = 3
@@ -116,6 +120,92 @@ if __name__ == "__main__":
         # F1 Score
         print("Training F1-Score", f1_score(train_Y, train_y_preds, average='micro') )
         print("Testing F1-Score", f1_score(test_Y, test_y_preds, average='micro') )
+
+        # ROC
+        Y_roc_test = label_binarize(test_Y, classes=[0, 1, 2])
+        # print(test_X.shape, Y_roc_test.T[0].shape)
+        acc0, y_score0 = ovo_model.score(test_X, Y_roc_test.T[0])
+        acc1, y_score1 = ovo_model.score(test_X, Y_roc_test.T[1])
+        acc2, y_score2 = ovo_model.score(test_X, Y_roc_test.T[2])
+        y_score = []
+        y_score.append(np.array(y_score0))
+        y_score.append(np.array(y_score1))
+        y_score.append(np.array(y_score2))
+        y_score = np.array(y_score).T
+        fpr = dict()
+        tpr = dict()
+        roc_auc = dict()
+        for i in range(n_classes):
+            fpr[i], tpr[i], _ = roc_curve(Y_roc_test[:, i], y_score[:, i])
+            roc_auc[i] = auc(fpr[i], tpr[i])
+
+        lw = 2
+        colors = ['red', 'blue', 'darkorange']
+
+        plt.figure()
+        for i in range(n_classes):
+            plt.plot(fpr[i], tpr[i], color = colors[i], label='Class ' + str(i) + ' ROC curve (area = %0.2f)' % roc_auc[i])
+            plt.plot([0, 1], [0, 1], 'k--')
+            plt.xlim([0.0, 1.0])
+            plt.ylim([0.0, 1.05])
+            plt.xlabel('False Positive Rate')
+            plt.ylabel('True Positive Rate')
+            plt.title('Receiver operating characteristic example')
+            plt.legend(loc="lower right")
+        plt.show()
+    
+    if ovr or lovr:
+        start_time = time.time()
+        if lovr:
+            ovr_model = loadmodel("ovrmodel")
+        else:
+            ovr_model = onevsrest.onevsrest(n_classes, train_X, train_Y)
+            ovr_model.fit()
+            storemodel(ovr_model, "ovrmodel")
+        print("Time taken: %s seconds ---" % (time.time() - start_time))
+        train_accuracy, train_y_preds = ovr_model.score(train_X, train_Y)
+        test_accuracy, test_y_preds = ovr_model.score(test_X, test_Y)
+
+        # Accuracy
+        print("Training Accuracy:", ovr_model.train_accuracy, train_accuracy)
+        print("Testing Accuracy:", test_accuracy)
+
+        # F1 Score
+        print("Training F1-Score", f1_score(train_Y, train_y_preds, average='micro') )
+        print("Testing F1-Score", f1_score(test_Y, test_y_preds, average='micro') )
+
+        # ROC
+        Y_roc_test = label_binarize(test_Y, classes=[0, 1, 2])
+        # print(test_X.shape, Y_roc_test.T[0].shape)
+        acc0, y_score0 = ovr_model.score(test_X, Y_roc_test.T[0])
+        acc1, y_score1 = ovr_model.score(test_X, Y_roc_test.T[1])
+        acc2, y_score2 = ovr_model.score(test_X, Y_roc_test.T[2])
+        y_score = []
+        y_score.append(np.array(y_score0))
+        y_score.append(np.array(y_score1))
+        y_score.append(np.array(y_score2))
+        y_score = np.array(y_score).T
+        fpr = dict()
+        tpr = dict()
+        roc_auc = dict()
+        for i in range(n_classes):
+            fpr[i], tpr[i], _ = roc_curve(Y_roc_test[:, i], y_score[:, i])
+            roc_auc[i] = auc(fpr[i], tpr[i])
+
+        lw = 2
+        colors = ['red', 'blue', 'darkorange']
+
+        plt.figure()
+        for i in range(n_classes):
+            plt.plot(fpr[i], tpr[i], color = colors[i], label='Class ' + str(i) + ' ROC curve (area = %0.2f)' % roc_auc[i])
+            plt.plot([0, 1], [0, 1], 'k--')
+            plt.xlim([0.0, 1.0])
+            plt.ylim([0.0, 1.05])
+            plt.xlabel('False Positive Rate')
+            plt.ylabel('True Positive Rate')
+            plt.title('Receiver operating characteristic example')
+            plt.legend(loc="lower right")
+        plt.show()
         
     if nb or lnb:
         start_time = time.time()
@@ -191,7 +281,7 @@ if __name__ == "__main__":
         print("Training F1-Score", f1_score(train_Y, train_Y_pred, average='micro') )
         print("Testing F1-Score", f1_score(test_Y, test_Y_pred, average='micro') )
         # Dec tree
-        tree.plot_tree(dectree_model)
+        # tree.plot_tree(dectree_model)
         plt.show()
 
         # ROC

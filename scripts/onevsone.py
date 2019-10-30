@@ -1,9 +1,7 @@
-import statistics
 import numpy as np
 
 from sklearn import svm
 from sklearn.metrics import accuracy_score
-from sklearn.preprocessing import label_binarize
 from sklearn.utils.testing import ignore_warnings
 from sklearn.exceptions import ConvergenceWarning
 
