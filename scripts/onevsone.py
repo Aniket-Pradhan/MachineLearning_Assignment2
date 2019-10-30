@@ -49,8 +49,28 @@ class onevsone:
         for sample_ind in range(len(X)):
             sample_X = X[sample_ind].reshape(1, -1)
             preds = []
+            # apreds = []
             for classifier_ind in range(len(self.classifiers)):
-                preds.append(self.classifiers[classifier_ind].predict(sample_X)[0])
+                # print(self.classifiers[classifier_ind].score(sample_X, [0]))
+                if classifier_ind == 0:
+                    score = self.classifiers[classifier_ind].score(sample_X, [0])
+                    if score == 1:
+                        preds.append(0)
+                    else:
+                        preds.append(1)
+                elif classifier_ind == 1:
+                    score = self.classifiers[classifier_ind].score(sample_X, [0])
+                    if score == 1:
+                        preds.append(0)
+                    else:
+                        preds.append(2)
+                elif classifier_ind == 2:
+                    score = self.classifiers[classifier_ind].score(sample_X, [1])
+                    if score == 1:
+                        preds.append(1)
+                    else:
+                        preds.append(2)
+                # preds.append(self.classifiers[classifier_ind].predict(sample_X)[0])
             fin_preds.append(max(set(preds), key=preds.count))
         return accuracy_score(fin_preds, Y.ravel()), fin_preds
 
